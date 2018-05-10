@@ -6,11 +6,12 @@
 #define LED_COUNT 27
 #define MPU_UPDATE_COUNT 4
 #define MPU_UPDATE_TIMER 10
-#define BLINK_UPDATE_TIMER 500
-#define RESET_TIMEOUT 10000
+#define BLINK_UPDATE_TIMER 700
+#define RESET_TIMEOUT 5000
 
 #define WS2812B_PIN 9
 #define CALIBRATION_PIN 8
+#define OUTPUT_PIN 7
 
 WS2812 LED(LED_COUNT);
 MPU6050 mpu6050(Wire);
@@ -42,6 +43,7 @@ void setColor(cRGB color) {
 
 void setup() {
     pinMode(CALIBRATION_PIN, INPUT);
+    pinMode(OUTPUT_PIN, OUTPUT);
     if(digitalRead(CALIBRATION_PIN) == HIGH) {
         debug = true;
         Serial.begin(9600);
@@ -76,29 +78,33 @@ void loop() {
     }
 
     if(updateCount >= MPU_UPDATE_COUNT) {
-        updateDelay = 500;
+        updateDelay = 200;
         accel = accel / MPU_UPDATE_COUNT;
         updateCount = 0;
 
         if(accel >= 1.46f && accel < 1.52f) {
+            resetTime = curTime;
             if(mode < 1) {
                 mode = 1;
             }
         }
 
         if(accel >= 1.52f && accel < 1.58f) {
+            resetTime = curTime;
             if(mode < 2) {
                 mode = 2;
             }
         }
 
         if(accel >= 1.58f && accel < 1.64f) {
+            resetTime = curTime;
             if(mode < 4) {
                 mode = 4;
             }
         }
 
         if(accel >= 1.64f) {
+            resetTime = curTime;            
             if(mode < 8) {
                 mode = 8;
             }
@@ -116,13 +122,14 @@ void loop() {
                 lighted = false;
                 timeUpdateDelay = 100;
                 setColor(black);
+                digitalWrite(OUTPUT_PIN, LOW);
 
-     
             } else {
                 lighted = true;
                 oldLightTime = millis();
                 timeUpdateDelay = 0;
                 setColor(white);  
+                digitalWrite(OUTPUT_PIN, HIGH);
             }
         }
     } else {
@@ -132,7 +139,8 @@ void loop() {
         for(i=0; i<27; i++) {
             LED.set_crgb_at(i, white);
         }      
-        LED.sync();            
+        LED.sync();     
+        digitalWrite(OUTPUT_PIN, HIGH);               
     }
 
     if(curTime > resetTime + RESET_TIMEOUT) {
